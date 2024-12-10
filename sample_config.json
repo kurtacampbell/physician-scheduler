@@ -1,0 +1,127 @@
+{
+    "_comment": "This is a configuration file for the physician scheduling system, comments are designated with _comment and are not parsed",
+    "physicians": [
+        {
+            "name": "Dr. Smith",
+            "blocked_dates": [
+                {
+                    "start": "2024-01-15",
+                    "end": "2024-01-16",
+                    "name": "Conference"
+                }
+            ],
+            "carryover_data": {
+                "nights": 2
+            }
+        },
+        {
+            "name": "Dr. Johnson",
+            "blocked_dates": [
+                {
+                    "start": "2024-01-20",
+                    "end": "2024-01-20",
+                    "name": "Personal"
+                }
+            ],
+            "carryover_data": {
+                "nights": 1
+            }
+        },
+        {
+            "name": "Dr. Williams",
+            "blocked_dates": [
+                {
+                    "start": "2024-01-10",
+                    "end": "2024-01-10",
+                    "name": "Vacation"
+                },
+                {
+                    "start": "2024-01-25",
+                    "end": "2024-01-25",
+                    "name": "CME"
+                }
+            ],
+            "carryover_data": {
+                "nights": 3
+            }
+        },
+        {
+            "name": "Dr. Brown",
+            "blocked_dates": [
+                {
+                    "start": "2024-01-05",
+                    "end": "2024-01-06",
+                    "name": "Family Event"
+                }
+            ],
+            "carryover_data": {
+                "nights": 0
+            }
+        }
+    ],
+    "dates": {
+        "assignement_range": [
+            {
+                "_comment": "This is the range of dates that will be assigned to physicians",
+                "start": "2025-01-01",
+                "end": "2026-1-31"
+            }
+        ],
+        "output_range": [
+            {
+                "_comment": "Range of dates output. Dates in assignement range but not in output range will be included in next year's preassigned dates.",
+                "start": "2025-01-01",
+                "end": "2026-1-31"
+            }
+        ],
+        "preassigned_dates": [
+            {
+                "_comment": "Assigned before runtime. Not included in assignment counts.",
+                "name": "New Year's Day",
+                "date": "2025-01-01",
+                "type": "Holiday",
+                "physician": "Dr. Smith"
+            },
+            {
+                "name": "Martin Luther King Jr. Day",
+                "date": "2025-01-20",
+                "type": "Holiday",
+                "physician": "Dr. Smith"
+            }
+        ],
+        "holidays": [
+            {
+                "date": "2025-05-26",
+                "name": "Memorial Day"
+            },
+            {
+                "date": "2025-07-04",
+                "name": "Independence Day"
+            },
+            {
+                "date": "2025-09-01",
+                "name": "Labor Day"
+            },
+            {
+                "date": "2025-11-27",
+                "name": "Thanksgiving Day"
+            },
+            {
+                "date": "2025-11-28",
+                "name": "Day after Thanksgiving"
+            },
+            {
+                "date": "2025-12-25",
+                "name": "Christmas Day"
+            },
+            {
+                "date": "2026-01-01",
+                "name": "New Year's Day"
+            },
+            {
+                "date": "2026-01-19",
+                "name": "Martin Luther King Jr. Day"
+            }
+        ]
+    }
+} 
