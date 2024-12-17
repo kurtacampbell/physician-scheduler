@@ -1,6 +1,6 @@
 # models/date_assignment.py
 
-from datetime import date
+from datetime import date, timedelta
 
 class DateAssignment:
     def __init__(self, date: date, assignment_type: str, name: str = None):
@@ -48,3 +48,16 @@ class DateAssignment:
         Set the debug string for the date assignment.
         """
         self.debug_string = debug_string    
+
+    @staticmethod
+    def get_weekend_start(current_date: date) -> date:
+        """
+        Get the Friday date for a given weekend date.
+        """
+        weekday = current_date.weekday()
+        if weekday == 4:  # Friday
+            return current_date
+        elif weekday == 5:  # Saturday
+            return current_date - timedelta(days=1)
+        else:  # Sunday
+            return current_date - timedelta(days=2)    

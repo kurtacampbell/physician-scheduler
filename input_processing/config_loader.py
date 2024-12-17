@@ -7,126 +7,113 @@ from models.physician import Physician
 from models.date_assignment import DateAssignment
 
 class ConfigLoader:
+
     def __init__(self, config_path: str):
         """
         Initialize the input handler with a path to the configuration file.
+        Validates that the file exists and is loadable.
         
         Args:
             config_path (str): Path to the JSON configuration file
+            
+        Raises:
+            FileNotFoundError: If config file does not exist
+            ValueError: If config file is not valid JSON
         """
         self.config_path = config_path
-
-    def load_config(self) -> tuple[List[Physician], List[DateAssignment]]:
-        """
-        Load and parse all data from the configuration file.
         
-        Returns:
-            tuple: (List of Physicians, List of date assignments)
-        """
+        # Validate file exists and is readable
         try:
-            with open(self.config_path, 'r') as file:
-                data = json.load(file)
-            
-            physicians = self._parse_physicians(data.get('physicians', []))
-            dates = self._parse_dates(data.get('dates', {}))
-            
-            return physicians, dates
-            
+            with open(config_path, 'r') as file:
+                # Attempt to parse JSON
+                self.config_data = self._strip_comments(json.load(file))
+                
         except FileNotFoundError:
-            raise FileNotFoundError(f"Configuration file not found: {self.config_path}")
+            raise FileNotFoundError(f"Configuration file not found: {config_path}")
         except json.JSONDecodeError:
-            raise ValueError(f"Invalid JSON format in configuration file: {self.config_path}")
+            raise ValueError(f"Invalid JSON format in configuration file: {config_path}")
+        except Exception as e:
+            raise ValueError(f"Error validating config file: {str(e)}")
+        
+        # Save the directory path without the config file
+        self.config_dir = '/'.join(config_path.split('/')[:-1])
+
+        # Get the output base filename from the config file, or use the current year if not specified
+        self.output_base_filename = self.config_data.get('output_base_filename', f"{datetime.now().year}_schedule")
+
+        # Get the random seed from the config file, or use 12345 if not specified
+        self.random_seed = self.config_data.get('random_seed', 12345)
+
+        # Get the debug flag from the config file, or use False if not specified
+        self.debug = self.config_data.get('debug', False)
+
+        # Get the output options from the config file
+        self.output_excel = self.config_data.get('output_excel', False)
+        self.output_json = self.config_data.get('output_json', False)
+        self.output_google_cal_import = self.config_data.get('output_google_cal_import', False)
+        self.output_next_period_config = self.config_data.get('output_next_period_config', False)    
 
     def get_physicians(self) -> List[Physician]:
         """
-        Returns the list of physicians from the configuration file.
-        """
-        try:
-            with open(self.config_path, 'r') as file:
-                data = json.load(file)
-            
-            physicians = self._parse_physicians(data.get('physicians', []))
-            
-            return physicians
-            
-        except FileNotFoundError:
-            raise FileNotFoundError(f"Configuration file not found: {self.config_path}")
-        except json.JSONDecodeError:
-            raise ValueError(f"Invalid JSON format in configuration file: {self.config_path}")
-
-    def get_dates(self) -> List[DateAssignment]:
-        """
-        Returns the list of date assignments from the configuration file.
-        """
-        try:
-            with open(self.config_path, 'r') as file:
-                data = json.load(file)
-            
-            physicians = self._parse_physicians(data.get('physicians', []))
-            dates = self._parse_dates(data.get('dates', {}))
-            
-            return dates
-            
-        except FileNotFoundError:
-            raise FileNotFoundError(f"Configuration file not found: {self.config_path}")
-        except json.JSONDecodeError:
-            raise ValueError(f"Invalid JSON format in configuration file: {self.config_path}")
-
-    def _parse_physicians(self, physician_data: Dict[str, Any]) -> List[Physician]:
-        """
-        Parse physician data from the configuration.
+        Parse and return the list of physicians from the configuration file.
         
-        Args:
-            physician_data (Dict[str, Any]): Dictionary of physician configurations with names as keys
-            
         Returns:
             List[Physician]: List of initialized Physician objects
+            
+        Raises:
+            ValueError: If physician data is invalid or missing required fields
         """
+        physician_data = self.config_data.get('physicians', [])
         physicians = []
 
         # Remove comment keys from physician data
         physician_data = {k: v for k, v in physician_data.items() if not k.startswith('_comment')}
 
         for name, data in physician_data.items():
-            try:
-                # Parse blocked date range
-                blocked_dates = {}
-                if 'blocked_dates' in data:
-                    for block in data['blocked_dates']:
-                        start = datetime.strptime(block['start'], '%Y-%m-%d').date()
-                        end = datetime.strptime(block['end'], '%Y-%m-%d').date()
-                        types = block.get('type', [])  # Get types, default to empty list if not present
+
+            # Create physician object 
+            physician = Physician(name=name)
+            physician.blocked_dates = {}
+            physicians.append(physician)
+
+            for key, value in data.items():    
+
+                # Parse blocked date range if it exists
+                if key == 'blocked_dates':
+                    blocked_dates = {}
+                    for blocked_range in value:
+                        start = datetime.strptime(blocked_range['start'], '%Y-%m-%d').date()
+                        end = datetime.strptime(blocked_range['end'], '%Y-%m-%d').date()
+                        types = blocked_range.get('type', [])  # Get types, default to empty list if not present
 
                         # Add all dates in range
                         current = start
                         while current <= end:
                             if current not in blocked_dates:
                                 blocked_dates[current] = []
+                            # Add types to the list for this date, creating empty list if needed
                             blocked_dates[current].extend(types)
                             current += timedelta(days=1)
 
-                # Create physician object
-                physician = Physician(
-                    name=name,
-                    blocked_dates=blocked_dates,
-                    carryover_data=data.get('carryover_data', {})
-                )
-                physicians.append(physician)
-                
-            except KeyError as e:
-                raise ValueError(f"Missing required field for physician: {e}")
-            except ValueError as e:
-                raise ValueError(f"Invalid date format in blocked dates for {name}: {e}")
+                    physician.blocked_dates = blocked_dates
+                else:
+                    # Add any other attributes to physician object
+                    setattr(physician, key, value)
                 
         return physicians
 
-    def _parse_dates(self, dates_data: Dict[str, Any]) -> List[DateAssignment]:
+    def get_dates(self) -> List[DateAssignment]:
         """
-        Parse date assignments from the configuration, splitting range into nights and weekends.
+        Parse and return the list of date assignments from the configuration file,
+        splitting range into nights and weekends.
         
         Returns:
             List[DateAssignment]: List of all date assignments
+            
+        Raises:
+            ValueError: If date data is invalid or in wrong format
         """
+        dates_data = self.config_data.get('dates', {})
         date_assignments = []
         
         # Parse holidays first
@@ -155,9 +142,9 @@ class ConfigLoader:
                     weekday = current_date.weekday()
                     
                     if weekday >= 4:  # Friday (4), Saturday (5), Sunday (6)
-                        if current_weekend is None or current_weekend.date != self._get_weekend_start(current_date):
+                        if current_weekend is None or current_weekend.date != DateAssignment.get_weekend_start(current_date):
                             # Create new weekend assignment starting on Friday
-                            weekend_start = self._get_weekend_start(current_date)
+                            weekend_start = DateAssignment.get_weekend_start(current_date)
                             current_weekend = DateAssignment(weekend_start, 'Weekend')
                             date_assignments.append(current_weekend)
                     elif weekday <= 3:  # Monday (0) through Thursday (3)
@@ -169,21 +156,12 @@ class ConfigLoader:
                 raise ValueError(f"Missing required field in date range: {e}")
             except ValueError as e:
                 raise ValueError(f"Invalid date format in range: {e}")
-                
-        return date_assignments
+            
 
-    @staticmethod
-    def _get_weekend_start(current_date: date) -> date:
-        """
-        Get the Friday date for a given weekend date.
-        """
-        weekday = current_date.weekday()
-        if weekday == 4:  # Friday
-            return current_date
-        elif weekday == 5:  # Saturday
-            return current_date - timedelta(days=1)
-        else:  # Sunday
-            return current_date - timedelta(days=2)
+        # Sort dates by date in ascending order
+        date_assignments.sort(key=lambda x: x.date)
+
+        return date_assignments
         
     def get_excel_path(self) -> str:
         """
@@ -193,87 +171,38 @@ class ConfigLoader:
         Returns:
             str: Path where the schedule should be exported
         """
-        try:
-            with open(self.config_path, 'r') as file:
-                data = json.load(file)
-            
-            # Return the specified output file or generate a default name
-            return data.get('excel_path', f"schedule_{datetime.now().year}.xlsx")
-            
-        except FileNotFoundError:
-            raise FileNotFoundError(f"Configuration file not found: {self.config_path}")
-        except json.JSONDecodeError:
-            raise ValueError(f"Invalid JSON format in configuration file: {self.config_path}")
+        return self.config_data.get('excel_path', f"schedule_{datetime.now().year}.xlsx")
         
     def get_seed(self) -> int:
         """
         Get the seed from the configuration file.
         """
-        try:
-            with open(self.config_path, 'r') as file:
-                data = json.load(file)
-            
-            # Return the specified output file or generate a default name
-            return data.get('random_seed', 12345)
-            
-        except FileNotFoundError:
-            raise FileNotFoundError(f"Configuration file not found: {self.config_path}")
-        except json.JSONDecodeError:
-            raise ValueError(f"Invalid JSON format in configuration file: {self.config_path}")
+        return self.config_data.get('random_seed', 12345)
         
     def get_holiday_utility_matrix(self) -> Dict[str, Dict[str, int]]:
         """ 
         Get the holiday utility matrix from the configuration file.
         """
-        try:
-            with open(self.config_path, 'r') as file:
-                data = json.load(file)
-
-            return_dict = data.get('models').get('holiday_lp').get('holiday_utility_matrix', {})   
-            # Remove any keys that start with _comment
-            return_dict = {k: v for k, v in return_dict.items() if not k.startswith('_comment')}
-
-            return return_dict
-
-        except FileNotFoundError:
-            raise FileNotFoundError(f"Configuration file not found: {self.config_path}")
-        except json.JSONDecodeError:
-            raise ValueError(f"Invalid JSON format in configuration file: {self.config_path}")
+        return_dict = self.config_data.get('models', {}).get('holiday_lp', {}).get('holiday_default_utility_matrix', {})   
+        return {k: v for k, v in return_dict.items() if not k.startswith('_comment')}
     
     def get_holiday_past_assignments(self) -> Dict[str, Dict[str, List[int]]]:
         """
         Get the holiday past assignments from the configuration file.
         """ 
-        try:
-            with open(self.config_path, 'r') as file:
-                data = json.load(file)
-            
-            return data.get('models').get('holiday_lp').get('holiday_past_assignments', {})     
-
-        except FileNotFoundError:
-            raise FileNotFoundError(f"Configuration file not found: {self.config_path}")
-        except json.JSONDecodeError:
-            raise ValueError(f"Invalid JSON format in configuration file: {self.config_path}")
+        return self.config_data.get('models', {}).get('holiday_lp', {}).get('holiday_past_assignments', {})     
 
     def get_holiday_default_utility(self) -> int:
         """
         Get the holiday default utility from the configuration file.
         """
-        try:
-            with open(self.config_path, 'r') as file:
-                data = json.load(file)
-            
-            return data.get('models').get('holiday_lp').get('holiday_default_utility', 10)
-            
-        except FileNotFoundError:
-            raise FileNotFoundError(f"Configuration file not found: {self.config_path}")
-        except json.JSONDecodeError:
-            raise ValueError(f"Invalid JSON format in configuration file: {self.config_path}")  
-
+        return self.get_config_value("models", "holiday_lp", "holiday_default_utility", default=10)
 
     def make_next_config_file(self, dates, output_path):
         """
         Create next year's config file by updating holiday past assignments.
+
+        Consider moving this to output proceessing module.
         """
         # Read current config
         with open(self.config_path, 'r') as f:
@@ -322,3 +251,46 @@ class ConfigLoader:
         # Write updated config to new file
         with open(output_path, 'w') as f:
             json.dump(config, f, indent=4) 
+
+
+    def _strip_comments(self, data):
+        """Recursively removes all keys that start with '_comment' from nested dictionaries"""
+        if not isinstance(data, dict):
+            return data
+            
+        result = {k: v for k, v in data.items() if not k.startswith('_comment')}
+        for key, value in result.items():
+            if isinstance(value, dict):
+                result[key] = self._strip_comments(value)
+        return result
+
+    def get_config_value(self, *keys: str, default: Any = None) -> Any:
+        """
+        Get a value from nested dictionary keys in the config file.
+        
+        Args:
+            *keys: Variable number of string keys representing the path to the value
+            default: Default value to return if the path doesn't exist
+            
+        Returns:
+            Any: The value at the specified path, or the default if not found
+            
+        Example:
+            # For config structure like:
+            # {
+            #     "models": {
+            #         "holiday_lp": {
+            #             "holiday_default_utility": 10
+            #         }
+            #     }
+            # }
+            # Call with:
+            # get_config_value("models", "holiday_lp", "holiday_default_utility", default=5)
+        """
+        current = self.config_data
+        try:
+            for key in keys:
+                current = current[key]
+            return current
+        except (KeyError, TypeError):
+            return default

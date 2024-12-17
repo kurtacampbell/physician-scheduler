@@ -3,39 +3,29 @@
 from datetime import date
 
 class Physician:
-    def __init__(self, name, blocked_dates=None, carryover_data=None):
+    def __init__(self, name, blocked_dates=None):
         self.name = name
-        self.blocked_dates = blocked_dates or set()
-        default_data = {'nights': 0, 'weekends': 0, 'holidays': 0}
-        if carryover_data:
-            default_data.update(carryover_data)
-        self.carryover_data = default_data
+        self.blocked_dates = blocked_dates
         self.assigned_dates = []  # List of DateAssignment objects
-        self.total_available_dates = 0  # Will be calculated
-        self.availability_ratio = 0  # Will be calculated
-        self.expected_assignments = 0  # Will be calculated
-        self.current_assignments = 0  # Updated during scheduling
 
-    def is_available(self, date: date, assignment_type: str = None) -> bool:
+    def is_available(self, check_date: date, assignment_type: str = None) -> bool:
         """
         Check if the physician is available on a given date for a specific assignment type.
         
         Args:
-            date (date): The date to check availability for
+            check_date (date): The date to check availability for
             assignment_type (str, optional): The type of assignment to check. If None, checks for any block.
         
         Returns:
             bool: True if the physician is available, False otherwise
         """
-        if date not in self.blocked_dates:
+        if check_date not in self.blocked_dates:
             return True
         
-        # If no specific assignment type is provided, consider any block as unavailable
         if assignment_type is None:
             return False
         
-        # If the date is blocked, check if it's blocked for this specific type
-        blocked_types = self.blocked_dates[date]
+        blocked_types = self.blocked_dates[check_date]
         return not (blocked_types == [] or assignment_type in blocked_types)
 
     def assign_date(self, date_assignment):
@@ -43,14 +33,6 @@ class Physician:
         Assign a date to the physician.
         """
         self.assigned_dates.append(date_assignment)
-        self.current_assignments += 1
-        # Update carryover data
-        if date_assignment.type == 'Night':
-            self.carryover_data['nights'] += 1
-        elif date_assignment.type == 'Weekend':
-            self.carryover_data['weekends'] += 1
-        elif date_assignment.type == 'Holiday':
-            self.carryover_data['holidays'] += 1
 
     def calculate_total_available_dates(self, dates):
         """

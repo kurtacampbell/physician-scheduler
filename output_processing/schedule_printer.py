@@ -1,10 +1,15 @@
 from datetime import date
-from typing import List
+from typing import List, Dict
 from models.physician import Physician
 from models.date_assignment import DateAssignment
 import pandas as pd
 
 class SchedulePrinter:
+    def __init__(self, **kwargs):
+        self.output_base_filename = kwargs.get('output_base_filename', "schedule_output")
+        self.config_dir = kwargs.get('config_dir', "schedule_output")
+        self.debug = kwargs.get('debug', False)
+
     @staticmethod
     def print_chronological_schedule(physicians: List[Physician]) -> None:
         """
@@ -49,8 +54,7 @@ class SchedulePrinter:
             
             print(assignment_str) 
 
-    @staticmethod
-    def export_to_excel(date_assignments: List[DateAssignment], output_path: str = "schedule_output.xlsx", debug: bool = False) -> None:
+    def export_to_excel(self, date_assignments: List[DateAssignment]) -> None:
         """
         Export the schedule to an Excel file.
         
@@ -59,6 +63,12 @@ class SchedulePrinter:
                                    date assignments as values
             output_path (str): Path where the Excel file should be saved
         """
+
+        # Construct output path using base filename
+        output_path = f"{self.config_dir}/{self.output_base_filename}.xlsx"
+
+        debug = self.debug
+
         # Format the data for export
         output_assignments = []
         for assignment in date_assignments:
@@ -118,9 +128,8 @@ class SchedulePrinter:
             if not current.assigned_physician or not next_day.assigned_physician:
                 continue
                 
-            # Check if dates are consecutive and same physician
-            if (next_day.date - current.date).days == 1 and \
-               current.assigned_physician.name == next_day.assigned_physician.name:
+            # Check if dates are assigned to the same physician
+            if current.assigned_physician.name == next_day.assigned_physician.name:
                 back_to_back.append({
                     'physician': current.assigned_physician.name,
                     'first_date': current.date,
@@ -130,14 +139,65 @@ class SchedulePrinter:
         
         # Print results
         if back_to_back:
-            print("\nBack-to-back Assignments Found:")
+            print("\nBack-to-back Assignments:")
             print("-------------------------------")
             for entry in back_to_back:
                 print(f"Physician: {entry['physician']}")
                 print(f"Dates: {entry['first_date']} -> {entry['second_date']}")
                 print(f"Types: {entry['types']}")
                 print("-------------------------------")
-    
+
+            print(f"\nBack-to-back Assignments Found: {len(back_to_back)}")
+
+    @staticmethod
+    def print_adjacent_assignments_between_physicians(date_assignments: List[DateAssignment], physician1: Physician, physician2: Physician) -> None:
+        """
+        Print all instances where two specific physicians have adjacent assignments.
+        
+        Args:
+            date_assignments (List[DateAssignment]): List of date assignments to analyze
+            physician1 (Physician): First physician to check
+            physician2 (Physician): Second physician to check
+        """
+        # Sort assignments by date
+        sorted_assignments = sorted(date_assignments, key=lambda x: x.date)
+        
+        # Track adjacent assignments
+        adjacent_assignments = []
+        
+        # Check each adjacent pair of assignments
+        for i in range(len(sorted_assignments)-1):
+            current = sorted_assignments[i]
+            next_day = sorted_assignments[i+1]
+            
+            # Skip if either assignment has no physician
+            if not current.assigned_physician or not next_day.assigned_physician:
+                continue
+                
+            # Check if dates involve both physicians
+            if ((current.assigned_physician == physician1 and next_day.assigned_physician == physician2) or
+                (current.assigned_physician == physician2 and next_day.assigned_physician == physician1)):
+                adjacent_assignments.append({
+                    'first_physician': current.assigned_physician.name,
+                    'second_physician': next_day.assigned_physician.name,
+                    'first_date': current.date,
+                    'second_date': next_day.date,
+                    'types': f"{current.type} -> {next_day.type}"
+                })
+        
+        # Print results
+        if adjacent_assignments:
+            print(f"\nAdjacent Assignments between {physician1.name} and {physician2.name}:")
+            print("-------------------------------")
+            for entry in adjacent_assignments:
+                print(f"Sequence: {entry['first_physician']} -> {entry['second_physician']}")
+                print(f"Dates: {entry['first_date']} -> {entry['second_date']}")
+                print(f"Types: {entry['types']}")
+                print("-------------------------------")
+
+            print(f"\nAdjacent Assignments Found: {len(adjacent_assignments)}")
+
+
     @staticmethod
     def print_holiday_assignments(physicians: List[Physician]) -> None:
         """

@@ -1,0 +1,249 @@
+{
+    "setup": {
+        "_comment_config1": "This is a configuration file for the physician scheduling system.",
+        "_comment_config2": "Comments start with _comment and are not parsed.",
+
+        "_comment_filename": "This is the base filename for all output files. It will be appended with .json or .xlsx as appropriate.", 
+        "output_base_filename": "2025_schedule",
+
+        "comment_output": "These items turn on or off output of various files.",
+        "output_excel": true,
+        "output_json": true,
+        "output_google_cal_import": true,
+        "output_next_period_config": true,
+
+        "comment_debug": "This item turns on or off debug mode.",
+        "debug": false
+    },
+
+    "physicians": {
+        "_comment_0": "Physician name is the key and the value is a dictionary of attributes.",
+        "_comment_1": "blocked_dates is a list of dictionaries, each representing a blocked date range.",
+        "_comment_2": "Each blocked date range dictionary contains start and end dates, and a list of assignment types.",
+        "_comment_3": "If assignment types are specified, the block only applies to those types.",
+        "_comment_4": "If no assignment types are specified, the block applies to all types.",
+        "Physician A": {
+            "blocked_dates": [
+                {
+                    "start": "2025-01-22",
+                    "end": "2025-01-26",
+                    "name": "Jan 22-26"
+                }, 
+                {
+                    "start": "2025-02-19",
+                    "end": "2025-02-23",
+                    "name": "Feb 19-23"
+                },
+                {
+                    "start": "2025-05-21",
+                    "end": "2025-05-27",
+                    "name": "May 21-27"
+                },
+                {
+                    "start": "2025-09-19",
+                    "end": "2025-09-22",
+                    "name": "September 19-22"
+                }
+            ]
+        },
+        "Physician B": {
+            "blocked_dates": [
+                {
+                    "start": "2025-03-29",
+                    "end": "2025-04-06",
+                    "name": "3/29/2025-4/6/2025"
+                }, 
+                {
+                    "start": "2025-12-24",
+                    "end": "2026-01-11",
+                    "name": "12/24/2025-1/11/2026"
+                }
+            ]
+        },
+        "Physician C": {
+            "blocked_dates": [
+                {
+                    "start": "2025-02-21",
+                    "end": "2025-02-23",
+                    "name": "Vacation 1"
+                },
+                {
+                    "start": "2025-03-29",
+                    "end": "2025-04-07",
+                    "name": "Spring Break"
+                },
+                {
+                    "start": "2025-07-03",
+                    "end": "2025-07-06", 
+                    "name": "Tentative block if not holiday",
+                    "type": ["Night", "Weekend"]
+                },
+                {
+                    "start": "2025-09-19",
+                    "end": "2025-09-21", 
+                    "name": "Vacation 4"
+                },
+                {
+                    "start": "2025-11-21",
+                    "end": "2025-11-30",
+                    "type": ["Night", "Weekend"],
+                    "name": "If not scheduled as holiday"
+                },
+                {
+                    "start": "2025-12-24",
+                    "end": "2026-01-11",
+                    "name": "Winter Break"
+                }
+            ]
+        },
+        "Physician D": {
+            "blocked_dates": [
+                {
+                    "start": "2025-02-28",
+                    "end": "2025-03-17",
+                    "name": "Extended Leave"
+                }
+            ]
+        },
+        "Physician E": {},
+        "Physician F": {},
+        "Physician G": {},
+        "Physician H": {}
+    },
+    "dates": {
+        "assignement_range": [
+            {
+                "_comment": "This is the range of dates that will be assigned to physicians",
+                "start": "2025-02-10",
+                "end": "2026-01-31"
+            }
+        ],
+        "holidays": [
+            {
+                "date": "2025-05-26",
+                "name": "Memorial Day"
+            },
+            {
+                "date": "2025-07-04",
+                "name": "Independence Day"
+            },
+            {
+                "date": "2025-09-01",
+                "name": "Labor Day"
+            },
+           {
+                "date": "2025-11-27",
+                "name": "Thanksgiving Day"
+            },
+            {
+                "date": "2025-11-28",
+                "name": "Day after Thanksgiving"
+            },
+            {
+                "date": "2025-12-25",
+                "name": "Christmas Day"
+            },
+            {
+                "date": "2026-01-01",
+                "name": "New Year's Day"
+            },
+            {
+                "date": "2026-01-19",
+                "name": "Martin Luther King Jr. Day"
+            }
+        ]
+    },
+    "models": {
+        "_comment_models": "Items in this section are used in main.py and passed into scheduling models.",
+        "roundrobin_scheduler": {
+            "constraints": [
+                {"physician1": "Any", "physician2": "Any", "type": [], "distance": 1},
+                {"physician1": "Physician H", "physician2": "Physician G", "type": ["Night", "Weekend"], "distance": 1}
+            ]
+        },
+        "holiday_lp": {
+            "holiday_default_utility": 10,
+            "holiday_default_utility_matrix": {
+                "_comment_1": "For each holiday, value is a dictionary with the year_index as key and utility as value.",
+                "_comment_2": "Year_index represents how many years ago a provider was assigned to this holiday.",
+                "_comment_3": "Utility is additive, if assigned to New Year's Day this year and last year, the utility is New Year's Day[0] + New Year's Day[1].",
+                "New Year's Day": {
+                    "0": 10,
+                    "1": 10,
+                    "2": 5
+                },
+                "Martin Luther King Jr. Day": {
+                    "0": 10,
+                    "1": 10,
+                    "2": 5
+                },
+                "Memorial Day": {
+                    "0": 10,
+                    "1": 10,
+                    "2": 5
+                },
+                "Independence Day": {
+                    "0": 10,
+                    "1": 10,
+                    "2": 5
+                },
+                "Labor Day": {
+                    "0": 10,
+                    "1": 10,
+                    "2": 5
+                },
+                "Thanksgiving Day": {
+                    "0": 10,
+                    "1": 10,
+                    "2": 5
+                },
+                "Day after Thanksgiving": {
+                    "0": 10,
+                    "1": 10,
+                    "2": 5
+                },
+                "Christmas Day": {
+                    "0": 10,
+                    "1": 10,
+                    "2": 5
+                }
+            },
+
+            "holiday_past_assignments": {
+                "_comment_1": "Value represents the number of years ago a provider was assigned to the specified holiday.",
+                "Physician C": {
+                    "Thanksgiving Day": ["1"],
+                    "Memorial Day": ["2"]
+                },
+                "Physician A": {
+                },
+                "Physician B": {
+                    "Christmas Day": ["1"],
+                    "New Year's Day": ["2"]
+                },
+                "Physician D": {
+                    "Labor Day": ["1"],
+                    "Thanksgiving Day": ["2"]
+                },
+                "Physician E": {
+                    "Day after Thanksgiving": ["1"],
+                    "Martin Luther King Jr. Day": ["1"],
+                    "Independence Day": ["2"]
+                },
+                "Physician F": {
+                    "Memorial Day": ["1"],
+                    "Martin Luther King Jr. Day": ["2"],
+                    "Day after Thanksgiving": ["2"]
+                },
+                "Physician G": {
+                    "New Year's Day": ["1"],
+                    "Labor Day": ["2"]
+                },
+                "Physician H": {
+                    "Independence Day": ["1"],
+                    "Christmas Day": ["2"]
+                }
+            }
+        }
+    }
+} 

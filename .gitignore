@@ -6,11 +6,9 @@ debug/
 *.xlsx
 *.xls
 
-config/
-
-
-
-
+# Keep sample config but ignore everything else in config
+config/*
+!config/sample_config.json
 
 # Python
 __pycache__/

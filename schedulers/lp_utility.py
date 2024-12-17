@@ -2,7 +2,7 @@ from pulp import *
 from .base_scheduler import Scheduler
 from datetime import datetime, timedelta
 
-class LPScheduler(Scheduler):
+class LPUtility(Scheduler):
     def __init__(self, physicians, dates, assignment_type="LP", utility_matrix=None, past_assignments=None, default_utility=10):
         super().__init__(physicians, dates)
         self.assignment_type = assignment_type
