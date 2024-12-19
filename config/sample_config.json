@@ -3,17 +3,16 @@
         "_comment_config1": "This is a configuration file for the physician scheduling system.",
         "_comment_config2": "Comments start with _comment and are not parsed.",
 
-        "_comment_filename": "This is the base filename for all output files. It will be appended with .json or .xlsx as appropriate.", 
-        "output_base_filename": "2025_schedule",
+        "comment_debug": "This item turns on or off debug mode.",
+        "debug": false
+    },
 
+    "output_options": {
         "comment_output": "These items turn on or off output of various files.",
         "output_excel": true,
         "output_json": true,
         "output_google_cal_import": true,
-        "output_next_period_config": true,
-
-        "comment_debug": "This item turns on or off debug mode.",
-        "debug": false
+        "output_next_period_config": true
     },
 
     "physicians": {
@@ -162,7 +161,6 @@
             ]
         },
         "holiday_lp": {
-            "holiday_default_utility": 10,
             "holiday_default_utility_matrix": {
                 "_comment_1": "For each holiday, value is a dictionary with the year_index as key and utility as value.",
                 "_comment_2": "Year_index represents how many years ago a provider was assigned to this holiday.",
